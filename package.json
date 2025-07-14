@@ -1,0 +1,26 @@
+{
+  "name": "ddos-detection-system",
+  "version": "1.0.0",
+  "description": "DDoS detection system using local LLM via Ollama",
+  "main": "src/app.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/app.js",
+    "test": "node test.js",
+    "postinstall": "node scripts/ollama-setup.js"
+  },
+  "dependencies": {
+    "csv-parser": "^3.0.0",
+    "node-fetch": "^3.3.2"
+  },
+  "keywords": [
+    "ddos",
+    "detection",
+    "llm",
+    "ollama",
+    "network",
+    "security"
+  ],
+  "author": "",
+  "license": "MIT"
+} 
