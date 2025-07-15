@@ -1,4 +1,4 @@
-# DDoS Detection System
+# AI Enchanced Network Scanner
 
 A Node.js tool for detecting DDoS attacks in network traffic logs using both heuristics and local LLM analysis (Ollama + Mistral). Supports HTTP and CIC-DDoS2019 flow logs.
 
