@@ -14,7 +14,7 @@ A Node.js tool for detecting DDoS attacks in network traffic logs using both heu
    ```
 3. **Generate sample data:**
    ```bash
-   node src/app.js --generate-sample sample.csv 200
+   node src/app.js --generate-sample sample 200
    ```
 4. **Test LLM connection:**
    ```bash

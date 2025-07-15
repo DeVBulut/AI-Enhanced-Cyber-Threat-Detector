@@ -48,7 +48,11 @@ async function main() {
                 system.close();
                 process.exit(0);
             case '--generate-sample': {
-                const sampleFile = args[i + 1] || CONFIG.DEFAULT_SAMPLE_FILE;
+                let sampleFile = args[i + 1] || CONFIG.DEFAULT_SAMPLE_FILE;
+                // Automatically add .csv if not present
+                if (sampleFile && !sampleFile.toLowerCase().endsWith('.csv')) {
+                    sampleFile += '.csv';
+                }
                 const numEntries = parseInt(args[i + 2]);
                 if (isNaN(numEntries) || numEntries <= 0) {
                     console.error('Invalid number of entries for --generate-sample. Must be a positive integer.');

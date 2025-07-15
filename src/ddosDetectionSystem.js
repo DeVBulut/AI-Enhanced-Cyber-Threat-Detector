@@ -8,6 +8,12 @@ import {
 import fs from 'fs';
 import readline from 'readline';
 
+function formatLLMResponse(title, response) {
+    // Normalize whitespace and add clear section headers
+    const clean = (response || '').trim().replace(/\r?\n/g, '\n').replace(/\n{2,}/g, '\n\n');
+    return `\n=== ${title} ===\n${clean}\n`;
+}
+
 const CONFIG = {
     DEFAULT_OUTPUT_FILE: 'ddos-analysis-results.json',
     DEFAULT_SAMPLE_FILE: 'sample-logs.csv',
@@ -87,9 +93,9 @@ class DDoSDetectionSystem {
             console.log(`Entry ${startIndex + i + 1}/${flaggedEntries.length}: IP ${flaggedEntry.sourceIP} (Risk Score: ${flaggedEntry.riskScore})`);
             try {
                 const explanation = await getDDoSExplanation(flaggedEntry);
-                console.log('Analysis:', explanation);
+                console.log(formatLLMResponse('AI Analysis', explanation));
                 const suggestions = await getAnomalyDetectionSuggestions(flaggedEntry);
-                console.log('Suggestions:', suggestions);
+                console.log(formatLLMResponse('AI Suggestions', suggestions));
             } catch (error) {
                 console.error(`Error analyzing entry ${startIndex + i + 1}:`, error.message);
             }
@@ -97,7 +103,7 @@ class DDoSDetectionSystem {
         if (entriesToAnalyze.length > 1) {
             try {
                 const summaryAnalysis = await getSummaryAnalysis(entriesToAnalyze);
-                console.log('Batch Assessment:', summaryAnalysis);
+                console.log(formatLLMResponse('AI Batch Assessment', summaryAnalysis));
             } catch (error) {
                 console.error('Error getting summary analysis:', error.message);
             }
@@ -160,39 +166,41 @@ class DDoSDetectionSystem {
         }
     }
     generateSampleData(outputFile = CONFIG.DEFAULT_SAMPLE_FILE, numEntries = CONFIG.DEFAULT_SAMPLE_ENTRIES) {
-        let csvContent = 'timestamp,sourceIP,destinationIP,requestCount,userAgent,responseCode,method,path,bytes,duration\n';
+        let csvContent = ' Timestamp, Source IP, Destination IP, Total Fwd Packets, Flow Duration, Total Length of Fwd Packets, Label\n';
         const suspiciousIPs = ['192.168.1.100', '10.0.0.50', '172.16.0.25'];
         const normalIPs = ['203.0.113.1', '198.51.100.2', '192.0.2.3'];
-        const suspiciousUserAgents = ['python-requests/2.28.1', 'curl/7.68.0', 'Go-http-client/1.1'];
-        const normalUserAgents = ['Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'];
+        const suspiciousLabels = ['DrDoS_DNS', 'DrDoS_LDAP', 'WebDDoS', 'Syn', 'UDP-lag'];
+        const normalLabels = ['BENIGN', 'Normal', 'Legitimate'];
+        
         for (let i = 0; i < numEntries; i++) {
             const timestamp = new Date(Date.now() - Math.random() * 24 * 60 * 60 * 1000).toISOString();
             const isSuspicious = Math.random() < 0.3;
             const sourceIP = isSuspicious ?
                 suspiciousIPs[Math.floor(Math.random() * suspiciousIPs.length)] :
                 normalIPs[Math.floor(Math.random() * normalIPs.length)];
-            const userAgent = isSuspicious ?
-                suspiciousUserAgents[Math.floor(Math.random() * suspiciousUserAgents.length)] :
-                normalUserAgents[Math.floor(Math.random() * normalUserAgents.length)];
-            const requestCount = isSuspicious ?
+            const destinationIP = '192.168.1.1';
+            const totalFwdPackets = isSuspicious ?
                 Math.floor(Math.random() * 50) + 50 :
                 Math.floor(Math.random() * 10) + 1;
-            const responseCode = Math.random() < 0.1 ? '429' : '200';
-            const method = Math.random() < 0.1 ? 'HEAD' : 'GET';
-            const path = `/api/data/${Math.floor(Math.random() * 1000)}`;
-            const bytes = Math.floor(Math.random() * 10000) + 100;
-            const duration = Math.random() * 2;
-            csvContent += `${timestamp},${sourceIP},192.168.1.1,${requestCount},"${userAgent}",${responseCode},${method},${path},${bytes},${duration.toFixed(3)}\n`;
+            const flowDuration = Math.random() * 2;
+            const totalLength = Math.floor(Math.random() * 10000) + 100;
+            const label = isSuspicious ?
+                suspiciousLabels[Math.floor(Math.random() * suspiciousLabels.length)] :
+                normalLabels[Math.floor(Math.random() * normalLabels.length)];
+            
+            csvContent += `${timestamp},${sourceIP},${destinationIP},${totalFwdPackets},${flowDuration.toFixed(3)},${totalLength},${label}\n`;
         }
+        
         // Add edge cases and malformed rows
-        csvContent += `,MISSING_IP,10.0.0.1,5,"curl/7.68.0",200,GET,/api/data,1024,0.150\n`;
-        csvContent += `2024-01-15T10:30:00Z,,10.0.0.1,5,"curl/7.68.0",200,GET,/api/data,1024,0.150\n`;
-        csvContent += `2024-01-15T10:30:00Z,192.168.1.100,,5,"curl/7.68.0",200,GET,/api/data,1024,0.150\n`;
-        csvContent += `2024-01-15T10:30:00Z,999.999.999.999,10.0.0.1,5,"curl/7.68.0",200,GET,/api/data,1024,0.150\n`;
-        csvContent += `2024-01-15T10:30:00Z,192.168.1.100,10.0.0.1,-10,"curl/7.68.0",200,GET,/api/data,1024,0.150\n`;
-        csvContent += `2024-01-15T10:30:00Z,192.168.1.100,10.0.0.1,0,"curl/7.68.0",200,GET,/api/data,1024,0.150\n`;
-        csvContent += `2024-01-15T10:30:00Z,192.168.1.100,10.0.0.1,5,"curl/7.68.0",200,GET,/api/data,notanumber,0.150\n`;
-        csvContent += `2024-01-15T10:30:00Z,192.168.1.100,10.0.0.1,5,"curl/7.68.0",200,GET,/api/data,1024,notanumber\n`;
+        csvContent += `,MISSING_IP,10.0.0.1,5,0.150,1024,BENIGN\n`;
+        csvContent += `2024-01-15T10:30:00Z,,10.0.0.1,5,0.150,1024,BENIGN\n`;
+        csvContent += `2024-01-15T10:30:00Z,192.168.1.100,,5,0.150,1024,BENIGN\n`;
+        csvContent += `2024-01-15T10:30:00Z,999.999.999.999,10.0.0.1,5,0.150,1024,BENIGN\n`;
+        csvContent += `2024-01-15T10:30:00Z,192.168.1.100,10.0.0.1,-10,0.150,1024,BENIGN\n`;
+        csvContent += `2024-01-15T10:30:00Z,192.168.1.100,10.0.0.1,0,0.150,1024,BENIGN\n`;
+        csvContent += `2024-01-15T10:30:00Z,192.168.1.100,10.0.0.1,5,0.150,notanumber,BENIGN\n`;
+        csvContent += `2024-01-15T10:30:00Z,192.168.1.100,10.0.0.1,5,notanumber,1024,BENIGN\n`;
+        
         fs.writeFileSync(outputFile, csvContent);
         console.log(`Sample data generated: ${outputFile}`);
     }
